@@ -1,5 +1,13 @@
 import sys
 import asyncio
+import datetime
+import pickle
+import socket
+import pr_pb2 as pr
+import datetime
+import pickle
+import socket
+import pr_pb2 as pr
 import time
 import time
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -24,6 +32,7 @@ import tkinter as tk
 import tkinter as tk
 import threading
 
+
 global client_timeout
 client_timeout = 'MissInput'
 global message_try
@@ -34,10 +43,10 @@ global labellist
 labellist = []
 global in_button
 in_button = 0
+import inspect
+import inspect
 
-
-
-
+glob_glob = pr.WrapperMessage()
 
 class OptionDialog(QtWidgets.QDialogButtonBox):
     def __init__(self):
@@ -140,29 +149,36 @@ class RequestForFastResponseDialog(QtWidgets.QDialogButtonBox):
                 self.close()
             else:
                 print(message_try)
-                task = asyncio.run(main('FastResponse'+'\n'+str(self.request_timeout),x[0],int(x[1])))
-                self.thread = threading.Timer(0, self.rerun)
-                self.thread.start()
+                glob_glob = pr.WrapperMessage()
+                glob_glob.request_for_fast_response.CopyFrom(pr.RequestForFastResponse())
+                print(glob_glob)
+                asyncio.run(main(glob_glob,x[0],int(x[1])))
+                
+                if message_try!='':
+                    self.thread = threading.Timer(0, self.rerun)
+                    self.thread.start()
                 self.close()
         self.close()
     def rerun(self):
         value = 0
         while value<100:
+            global in_button
             in_button = 1
-            task1 = asyncio.run(main('FastResponse'+'\n'+str(self.request_timeout),x[0],int(x[1])))
-            in_button = 0
+            if client_timeout =='MissInput':
+                value = 1001
+                continue
+            task1 = asyncio.run(main(glob_glob,x[0],int(x[1])))
             (local_time := int(client_timeout)) if client_timeout.isdigit()==True else (local_time :=0)
-            print(labellist)
             if message_try != '' and local_time!=0:
                 asyncio.run(asyncio.sleep(local_time))
                 print("Вроде прошло")
-                application.signal_Fast.emit(1)
             elif message_try == '':
                 value = 1001
             else:
                 value = 1001
                 print("Воу полегче нажми галочку в настройках")
         else:
+            in_button = 0
             return
     def evt_rejected_clicked(self):
         self.close()
@@ -245,9 +261,13 @@ class RequestForSlowResponseDialog(QtWidgets.QDialogButtonBox):
                 QMessageBox.critical(qmsgBox,"HostError","Host has the form 'N', where 0<=N<=65535")
                 self.close()
             else:
-                asyncio.run(main('SlowResponse'+'\n'+str(self.request_timeout)+'\n'+'RequestForSlowResponse'+'\n'+str(self.server_sleep),x[0],int(x[1])))
-                self.thread = threading.Timer(0, self.rerun)
-                self.thread.start()
+                glob_glob = pr.WrapperMessage()
+                glob_glob.request_for_slow_response.time_in_seconds_to_sleep = self.server_sleep
+                print(glob_glob)
+                asyncio.run(main(glob_glob,x[0],int(x[1])))
+                if message_try !='':
+                    self.thread = threading.Timer(0, self.rerun)
+                    self.thread.start()
                 self.close()
         self.close()
     def rerun(self):
@@ -255,20 +275,24 @@ class RequestForSlowResponseDialog(QtWidgets.QDialogButtonBox):
         while value<100:
             global in_button
             in_button = 1
-            task1 = asyncio.run(main('SlowResponse'+'\n'+str(self.request_timeout)+'\n'+'RequestForSlowResponse'+'\n'+str(self.server_sleep),x[0],int(x[1])))
-            in_button = 0
+            if client_timeout =='MissInput':
+                value = 1001
+                continue
+            glob_glob = pr.WrapperMessage()
+            glob_glob.request_for_slow_response.time_in_seconds_to_sleep = self.server_sleep
+            task1 = asyncio.run(main(glob_glob,x[0],int(x[1])))
             (local_time := int(client_timeout)) if client_timeout.isdigit()==True else (local_time :=0)
             print(labellist)
             if message_try != '' and local_time!=0:
                 asyncio.run(asyncio.sleep(local_time))
                 print("Вроде прошло")
-                application.signal_Slow.emit(1)
             elif message_try == '':
                 value = 1001
             else:
                 value = 1001
                 print("Воу полегче нажми галочку в настройках")
         else:
+            in_button = 0
             return
     def evt_rejected_clicked(self):
         self.close()
@@ -281,8 +305,9 @@ class ClientWidget(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.init_UI()
-    signal_Fast = pyqtSignal(int)
-    signal_Slow = pyqtSignal(int)
+    #signal_Fast = pyqtSignal(str)
+    #signal_Slow = pyqtSignal(str)
+    siganl_protocol_send = pyqtSignal(str)
     def init_UI(self):
         self.setWindowTitle('Client')
         self.ui.input_currency_2.setPlaceholderText('ip-address')
@@ -290,6 +315,8 @@ class ClientWidget(QtWidgets.QMainWindow):
         self.ui.pushButton.clicked.connect(self.evt_pushbutton_clicked)
         self.ui.pushButton_2.clicked.connect(self.evt_pushbutton_2_clicked)
         self.ui.toolButton.clicked.connect(self.evt_toolbutton_clicked)
+        self.siganl_protocol_send.connect(self.evt_signal_protocol_send)
+        self.ui.pushButton_3.clicked.connect(self.evt_pushbutton_3_clicked)
         mygroupbox = QtWidgets.QGroupBox()
         global myform
         myform = QtWidgets.QFormLayout()
@@ -302,45 +329,50 @@ class ClientWidget(QtWidgets.QMainWindow):
         layout.addWidget(self.ui.scrollArea)
         print(1)
     
+    @ QtCore.pyqtSlot(str)
+    def evt_signal_protocol_send(self,arg):
+        connect = arg
+        lable = QtWidgets.QLabel()
+        lable.setStyleSheet("background-color: #22222e;\n"
+"color: white")
+        lable.setText(connect)
+        labellist.append(lable)
+        myform.addRow(labellist[-1])
+        lable.close()
+        
     def evt_pushbutton_clicked(self):
-        self.button_ok = RequestForSlowResponseDialog()
-        self.button_ok.show()
+        if 'x' not in globals():
+            qmsgBox = QMessageBox()
+            qmsgBox.setStyleSheet("background-color: #22222e;\n"
+"color: white")
+            QMessageBox.critical(qmsgBox,"ValueError","Please input ip and host")
+        elif in_button == 1:
+            qmsgBox = QMessageBox()
+            qmsgBox.setStyleSheet("background-color: #22222e;\n"
+"color: white")
+            QMessageBox.critical(qmsgBox,"SendError","Currently waiting for a response from the server on the previous request")
+        else:
+            self.button_ok = RequestForSlowResponseDialog()
+            self.button_ok.show()
+    
+    def evt_pushbutton_3_clicked(self):
         global x
         x = self.request_to_server()
-        self.signal_Slow.connect(self.evt_signal_Slow)
-        print(x)
-       # asyncio.run(main('SlowResponse'+'\n'+str(self.button_ok.request_timeout)+'\n'+'RequestForSlowResponse'+'\n'+str(self.button_ok.server_sleep),x[0],int(x[1])))
-    
-    def evt_signal_Fast(self):
-        connect = 'ConnectionEror: The server with the entered ip and host is not responding\n'
-        lable = QtWidgets.QLabel()
-        lable.setStyleSheet("background-color: #22222e;\n"
-"color: white")
-        lable.setText(connect)
-        labellist.append(lable)
-        myform.addRow(labellist[-1])
-        lable.close()
-    
-    def evt_signal_Slow(self):
-        connect = 'ConnectionEror: The server with the entered ip and host is not responding\n'
-        lable = QtWidgets.QLabel()
-        lable.setStyleSheet("background-color: #22222e;\n"
-"color: white")
-        lable.setText(connect)
-        labellist.append(lable)
-        myform.addRow(labellist[-1])
-        lable.close()
     
     def evt_pushbutton_2_clicked(self):
-        self.button_ok = RequestForFastResponseDialog()
-        self.button_ok.show()
-        #self.connect(self.button_ok.thread, self.button_ok.signal, myform.addRow(labellist[-1]))
-        global x
-        x = self.request_to_server()
-        self.signal_Fast.connect(self.evt_signal_Fast)
-       #asyncio.run(main('FastResponse'+'\n'+str(self.button_ok.request_timeout),x[0],int(x[1])))
-        print(x)
-
+        if 'x' not in globals():
+            qmsgBox = QMessageBox()
+            qmsgBox.setStyleSheet("background-color: #22222e;\n"
+"color: white")
+            QMessageBox.critical(qmsgBox,"ValueError","Please input ip and host")
+        elif in_button == 1:
+            qmsgBox = QMessageBox()
+            qmsgBox.setStyleSheet("background-color: #22222e;\n"
+"color: white")
+            QMessageBox.critical(qmsgBox,"SendError","Currently waiting for a response from the server on the previous request")
+        else:
+            self.button_ok = RequestForFastResponseDialog()
+            self.button_ok.show()
     
     def request_to_server(self):
         input_ip = self.ui.input_currency_2.text()
@@ -362,42 +394,25 @@ class EchoClientProtocol(asyncio.Protocol):
         self.on_con_lost = on_con_lost
 
     def connection_made(self, transport):
-        transport.write(self.message.encode())
-        lable = QtWidgets.QLabel()
-        lable.setStyleSheet("background-color: #22222e;\n"
-"color: white")
-        lable.setText('Data sent: {!r}'.format(self.message))
-        labellist.append(lable)
-        print(labellist)
-        myform.addRow(labellist[-1])
+        data_string = pickle.dumps(self.message)
+        transport.write(data_string)
         print('Data sent: {!r}'.format(self.message))
+        application.siganl_protocol_send.emit('Data sent: {!r}'.format(self.message))
 
     def data_received(self, data):
-        print('Data received: {!r}'.format(data.decode()))
         global data_decode
-        data_decode = data.decode()
-        lable = QtWidgets.QLabel()
-        lable.setStyleSheet("background-color: #22222e;\n"
-"color: white")
-        lable.setText('Data received: {!r}'.format(data.decode()))
-        labellist.append(lable)
-        myform.addRow(labellist[-1])
+        data_decode = pickle.loads(data)
+        print('Data received: {!r}'.format(data_decode))
+        application.siganl_protocol_send.emit('Data received: {!r}'.format(data_decode))
 
     def connection_lost(self, exc):
         print('The server closed the connection')
         self.on_con_lost.set_result(True)
-        lable = QtWidgets.QLabel()
-        lable.setStyleSheet("background-color: #22222e;\n"
-"color: white")
-        lable.setText('The server closed the connection')
-        labellist.append(lable)
-        myform.addRow(labellist[-1])
+        application.siganl_protocol_send.emit('The server closed the connection')
     
     
 
 async def main(message,ip,host):
-    # Get a reference to the event loop as we plan to use
-    # low-level APIs.
     global message_try
     global labellist
     try:
@@ -410,23 +425,10 @@ async def main(message,ip,host):
             ip, host)
         print(transport)
     except:
-        if in_button ==1:
-            message_try = message
-            return
-        else:
-            connect = 'ConnectionEror: The server with the entered ip and host is not responding\n'
-            lable = QtWidgets.QLabel()
-            lable.setStyleSheet("background-color: #22222e;\n"
-"color: white")
-            lable.setText(connect)
-            labellist.append(lable)
-            myform.addRow(labellist[-1])
-            lable.close()
-            message_try = message
-            print(message_try)
-            return
-    # Wait until the protocol signals that the connection
-    # is lost and close the transport.
+        connect = 'ConnectionEror: The server with the entered ip and host is not responding\n'
+        message_try = message
+        application.siganl_protocol_send.emit(connect)
+        return
     try:
         await on_con_lost
     finally:
@@ -438,6 +440,8 @@ async def main(message,ip,host):
 
 def appl():
     global application
+    global in_button
+    in_button = 0
     app = QtWidgets.QApplication([])
     application = ClientWidget()
     application.show()
