@@ -153,7 +153,7 @@ class RequestForFastResponseDialog(QtWidgets.QDialogButtonBox):
                 glob_glob.request_for_fast_response.CopyFrom(pr.RequestForFastResponse())
                 print(glob_glob)
                 asyncio.run(main(glob_glob,x[0],int(x[1])))
-                
+                asyncio.run(asyncio.sleep(int(self.request_timeout)/1000))
                 if message_try!='':
                     self.thread = threading.Timer(0, self.rerun)
                     self.thread.start()
@@ -265,6 +265,7 @@ class RequestForSlowResponseDialog(QtWidgets.QDialogButtonBox):
                 glob_glob.request_for_slow_response.time_in_seconds_to_sleep = self.server_sleep
                 print(glob_glob)
                 asyncio.run(main(glob_glob,x[0],int(x[1])))
+                asyncio.run(asyncio.sleep(int(self.request_timeout)/1000))
                 if message_try !='':
                     self.thread = threading.Timer(0, self.rerun)
                     self.thread.start()
@@ -305,8 +306,6 @@ class ClientWidget(QtWidgets.QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.init_UI()
-    #signal_Fast = pyqtSignal(str)
-    #signal_Slow = pyqtSignal(str)
     siganl_protocol_send = pyqtSignal(str)
     def init_UI(self):
         self.setWindowTitle('Client')
