@@ -396,24 +396,28 @@ class EchoClientProtocol(asyncio.Protocol):
         data_string = pickle.dumps(self.message)
         transport.write(data_string)
         print('Data sent: {!r}'.format(self.message))
-        application.siganl_protocol_send.emit('Data sent: {!r}'.format(self.message))
+        if 'application' in locals() or 'application' in globals():
+            application.siganl_protocol_send.emit('Data sent: {!r}'.format(self.message))
 
     def data_received(self, data):
         global data_decode
         data_decode = pickle.loads(data)
         print('Data received: {!r}'.format(data_decode))
-        application.siganl_protocol_send.emit('Data received: {!r}'.format(data_decode))
+        if 'application' in locals() or 'application' in globals():
+            application.siganl_protocol_send.emit('Data received: {!r}'.format(data_decode))
 
     def connection_lost(self, exc):
         print('The server closed the connection')
         self.on_con_lost.set_result(True)
-        application.siganl_protocol_send.emit('The server closed the connection')
+        if 'application' in locals() or 'application' in globals():
+            application.siganl_protocol_send.emit('The server closed the connection')
     
     
 
 async def main(message,ip,host):
     global message_try
     global labellist
+    global data_decode
     try:
         loop = asyncio.get_running_loop()
 
@@ -426,7 +430,8 @@ async def main(message,ip,host):
     except:
         connect = 'ConnectionEror: The server with the entered ip and host is not responding\n'
         message_try = message
-        application.siganl_protocol_send.emit(connect)
+        if application:
+            application.siganl_protocol_send.emit(connect)
         return
     try:
         await on_con_lost
@@ -435,9 +440,14 @@ async def main(message,ip,host):
         connect = ''
         message_try = ''
         transport.close()
-
+class Nado():
+    global data_decode
+    def __init__(self):
+        self.data_decode = data_decode
+    
 
 def appl():
+    print(type(10)==int)
     global application
     global in_button
     in_button = 0
