@@ -5,7 +5,7 @@ import socket
 import pr_pb2 as pr
 
 
-async def main(port = 5004):
+async def main(port = 5003):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind(('127.0.0.1', port)) #Метод используется для связывания сокета с определенным сетевым интерфейсом и номером порта:
     server.listen()
@@ -28,10 +28,14 @@ async def handler(client):
                 break
             message = pickle.loads(data)
             print('Data received: {!r}'.format(message))
-            print(type(message))
-            print(message.request_for_slow_response)
-            print(message.request_for_slow_response!='')
-            print(type(message.request_for_slow_response))
+            if type(message)==pr.WrapperMessage:
+                pass
+            else:
+                data2 = pickle.dumps(ValueError)
+                print('Send: {!r}'.format(data2))
+                await loop.sock_sendall(client, data2)
+                client_count-=1
+                break    
             if message.request_for_slow_response.time_in_seconds_to_sleep!=0:
                 print(datetime.datetime.now())
                 await asyncio.sleep(message.request_for_slow_response.time_in_seconds_to_sleep)
@@ -48,7 +52,7 @@ async def handler(client):
             print('Send: {!r}'.format(data2))
             await loop.sock_sendall(client, data2)
             client_count-=1
-            loop.close()
+            break
     print('Close connection')
 
 
