@@ -3,18 +3,8 @@ import datetime
 import pickle
 import socket
 import logging
-import configparser
 import pr_pb2 as pr
-
-def read_ini(file_path):
-    port = 0
-    config = configparser.ConfigParser()
-    config.read(file_path)
-    for section in config.sections():
-        for key in config[section]:
-            if key == 'port':
-                port = int(config[section][key])
-    return port
+import server.common.read_config as conf
 
 async def main(port):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -36,7 +26,7 @@ async def handler(client, addr):
     global client_count
     with client:
         while True:
-            data = await loop.sock_recv(client, 1000, loop.MSG_WAITALL)
+            data = await loop.sock_recv(client, 1000)
             if not data:
                 break
             message = pickle.loads(data)
@@ -55,7 +45,7 @@ async def handler(client, addr):
             await loop.sock_sendall(client, data2)
             client_count-=1
             break
-    logging.info('Connection from {}\n'.format(addr))
+    logging.info('Close connection from {}\n'.format(addr))
 
 
 
@@ -64,8 +54,8 @@ if __name__ == '__main__':
     client_count = 0
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    logging.basicConfig(level=logging.INFO, filename="logs.log", filemode="w", format="%(asctime)s %(levelname)s %(message)s")
-    port = read_ini('..\configs\config.ini')
-    #print(port)
+    logging.basicConfig(level=logging.INFO, filename="logs_asyncio.log", filemode="w", format="%(asctime)s %(levelname)s %(message)s")
+    port = conf.read_ini('../../configs/config.ini', 'asyncio')
+    print(port)
     loop.create_task(main(port))
     loop.run_forever()
