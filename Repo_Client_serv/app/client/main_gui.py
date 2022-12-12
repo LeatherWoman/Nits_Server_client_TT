@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(660, 740)
+        MainWindow.setFixedSize(660, 740)
         font = QtGui.QFont()
         font.setFamily("Arial")
         font.setPointSize(14)
@@ -40,14 +40,15 @@ class Ui_MainWindow(object):
         self.toolButton = QtWidgets.QToolButton(self.frame)
         self.toolButton.setGeometry(QtCore.QRect(610, 10, 61, 51))
         self.toolButton.setStyleSheet("color: white;\n"
-"background-color: #fb5b5d;\n"
+"background-color: #fa4244;\n"
 "border-radius: 10;\n"
 "padding: 16px;\n"
 "")
         self.toolButton.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("option.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("\project_work_server_client\project\option.png"))
         self.toolButton.setIcon(icon)
+        self.toolButton.setIconSize(QtCore.QSize(30,30))
         self.toolButton.setCheckable(False)
         self.toolButton.setChecked(False)
         self.toolButton.setAutoRepeat(False)
@@ -66,6 +67,7 @@ class Ui_MainWindow(object):
 "    color: white;\n"
 "    background-color: #fb5b5d;\n"
 "    border-radius: 30;\n"
+"    border-image : url(option.png);"
 "}\n"
 "\n"
 "QPushButton:pressed {\n"
@@ -90,6 +92,24 @@ class Ui_MainWindow(object):
 "    background-color: #fa4244;\n"
 "}")
         self.pushButton_2.setObjectName("pushButton_2")
+        self.pushButton_3 = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton_3.setGeometry(QtCore.QRect(320, 160, 31, 20))
+        font = QtGui.QFont()
+        font.setFamily("Arial")
+        font.setPointSize(8)
+        font.setBold(True)
+        font.setWeight(75)
+        self.pushButton_3.setFont(font)
+        self.pushButton_3.setStyleSheet("QPushButton {\n"
+"    color: white;\n"
+"    background-color: #fb5b5d;\n"
+"    border-radius: 10;\n"
+"}\n"
+"\n"
+"QPushButton:pressed {\n"
+"    background-color: #fa4244;\n"
+"}")
+        self.pushButton_3.setObjectName("pushButton_3")
         self.label_2 = QtWidgets.QLabel(self.centralwidget)
         self.label_2.setGeometry(QtCore.QRect(270, 380, 121, 31))
         font = QtGui.QFont()
@@ -157,4 +177,5 @@ class Ui_MainWindow(object):
         self.label_2.setText(_translate("MainWindow", "Request log"))
         self.input_currency_2.setText(_translate("MainWindow", ""))
         self.input_currency_3.setText(_translate("MainWindow", ""))
+        self.pushButton_3.setText(_translate("MainWindow","Ok"))
 
