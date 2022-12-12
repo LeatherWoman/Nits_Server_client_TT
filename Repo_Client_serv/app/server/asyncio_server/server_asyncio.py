@@ -31,6 +31,21 @@ async def handler(client, addr):
                 break
             message = pickle.loads(data)
             print('Data received:\n{!r}'.format(message))
+            if type(message)==pr.WrapperMessage:
+                if message.slow_response.connected_client_count !=0 or len(message.fast_response.current_date_time)!=0:
+                    data2 = pickle.dumps(ValueError)
+                    print('Send: {!r}'.format(data2))
+                    await loop.sock_sendall(client, data2)
+                    client_count-=1
+                    break
+                else:
+                    pass
+            else:
+                data2 = pickle.dumps(ValueError)
+                print('Send: {!r}'.format(data2))
+                await loop.sock_sendall(client, data2)
+                client_count-=1
+                break
             if message.request_for_slow_response.time_in_seconds_to_sleep != 0:
                 resp = pr.WrapperMessage()
                 resp.slow_response.connected_client_count = client_count
