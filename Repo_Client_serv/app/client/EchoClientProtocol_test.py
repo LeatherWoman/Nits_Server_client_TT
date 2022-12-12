@@ -1,3 +1,4 @@
+#importing libraries
 from unittest import TestCase, main
 from client import EchoClientProtocol
 from client import main as MAIN
@@ -5,13 +6,13 @@ from client import Nado
 import asyncio
 import pr_pb2 as pr
 
-#def Proto():
     
 
-
+#test EchoClientProtocol class
 class EchoClientProtocolTest(TestCase):
     '''Тесты для получения данных с сервера'''
     
+    #test for send WrapperMessage with request_for_fast_response attribute
     def test_decode_FastResponse(self):
         ip = '127.0.0.1'
         host = 5003
@@ -23,6 +24,7 @@ class EchoClientProtocolTest(TestCase):
         print('Test decode is ', test_decode_1)
         self.assertEqual(type(test_decode_1),pr.WrapperMessage)
         
+    #test for send WrapperMessage with request_for_slow_response attribute    
     def test_decode_SlowResponse(self):
         ip = '127.0.0.1'
         host = 5003
@@ -34,7 +36,7 @@ class EchoClientProtocolTest(TestCase):
         print('Test decode is ', test_decode_2)
         self.assertEqual(type(test_decode_2),pr.WrapperMessage)
     
-    
+    #test for send WrapperMessage with slow_response attribute
     def test_send_SlowResponse(self):
         ip = '127.0.0.1'
         host = 5003
@@ -46,7 +48,7 @@ class EchoClientProtocolTest(TestCase):
         print('Test decode is ', test_decode_4)
         self.assertEqual(test_decode_4,ValueError)
         
-        
+    #test for send WrapperMessage with fast_response attribute    
     def test_send_FastResponse(self):
         ip = '127.0.0.1'
         host = 5003
@@ -58,7 +60,7 @@ class EchoClientProtocolTest(TestCase):
         print('Test decode is ', test_decode_5)
         self.assertEqual(test_decode_5,ValueError)
         
-        
+    #test for send not a WrapperMessage    
     def test_decode_NotWrapperMessage(self):
         ip = '127.0.0.1'
         host = 5003
