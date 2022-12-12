@@ -1,3 +1,4 @@
+#import libraries
 import sys
 import asyncio
 import datetime
@@ -31,8 +32,10 @@ from threading import Thread
 import tkinter as tk
 import tkinter as tk
 import threading
+import inspect
+import inspect
 
-
+#global values
 global client_timeout
 client_timeout = 'MissInput'
 global message_try
@@ -43,18 +46,19 @@ global labellist
 labellist = []
 global in_button
 in_button = 0
-import inspect
-import inspect
 
 glob_glob = pr.WrapperMessage()
 
+#Dialog option window
 class OptionDialog(QtWidgets.QDialogButtonBox):
+    
     def __init__(self):
         super(OptionDialog, self).__init__()
         self.button_option_ok = Ui_Dialog()
         self.button_option_ok.setupUi(self)
         self.init_UI()
-             
+        
+    #filling parametrs of the option window         
     def init_UI(self):
         self.setWindowTitle('Option')
         self.button_option_ok.input_currency_3.setPlaceholderText('Reconnection timeout')
@@ -62,6 +66,8 @@ class OptionDialog(QtWidgets.QDialogButtonBox):
         self.button_option_ok.buttonBox.rejected.connect(self.evt_rejected_clicked)
         self.button_option_ok.checkBox.stateChanged.connect(self.evt_statechanged)
         self.statechanged = 0
+        
+    #button click handling    
     def evt_accepted_clicked(self):
         self.connect_timeout = self.button_option_ok.input_currency_3.text()
         if len(self.connect_timeout) == 0 and self.statechanged == 0:
@@ -91,6 +97,7 @@ class OptionDialog(QtWidgets.QDialogButtonBox):
         else:
             self.statechanged = 1
 
+#Dialog RequestForFastResponse window
 class RequestForFastResponseDialog(QtWidgets.QDialogButtonBox):
     def __init__(self):
         super(RequestForFastResponseDialog, self).__init__()
@@ -105,8 +112,11 @@ class RequestForFastResponseDialog(QtWidgets.QDialogButtonBox):
         self.button_fast_ok.buttonBox.accepted.connect(self.evt_accepted_clicked)
         self.button_fast_ok.buttonBox.rejected.connect(self.evt_rejected_clicked)
     
+    #button click handling
     def evt_accepted_clicked(self):
         self.request_timeout = self.button_fast_ok.input_currency_2.text()
+        
+        #exc and err handling
         if self.request_timeout.isdigit() == False:
             qmsgBox = QMessageBox()
             qmsgBox.setStyleSheet("background-color: #22222e;\n"
@@ -155,10 +165,13 @@ class RequestForFastResponseDialog(QtWidgets.QDialogButtonBox):
                 asyncio.run(main(glob_glob,x[0],int(x[1])))
                 asyncio.run(asyncio.sleep(int(self.request_timeout)/1000))
                 if message_try!='':
+                    #split into main thread and processing thread
                     self.thread = threading.Timer(0, self.rerun)
                     self.thread.start()
                 self.close()
         self.close()
+      
+    #reconnect function
     def rerun(self):
         value = 0
         while value<100:
@@ -183,11 +196,12 @@ class RequestForFastResponseDialog(QtWidgets.QDialogButtonBox):
     def evt_rejected_clicked(self):
         self.close()
 
+#timer function for reconnecton
 async def timer():
     (local_time := int(client_timeout)) if client_timeout.isdigit()==True else (local_time :=0)
     await asyncio.sleep(local_time)
 
-    
+#Dialog RequestForSlowResponse window
 class RequestForSlowResponseDialog(QtWidgets.QDialogButtonBox):
     def __init__(self):
         super(RequestForSlowResponseDialog, self).__init__()
@@ -204,9 +218,12 @@ class RequestForSlowResponseDialog(QtWidgets.QDialogButtonBox):
         self.button_slow_ok.buttonBox.accepted.connect(self.evt_accepted_clicked)
         self.button_slow_ok.buttonBox.rejected.connect(self.evt_rejected_clicked)
     
+    #button click handling
     def evt_accepted_clicked(self):
         self.request_timeout = self.button_slow_ok.input_currency_2.text()
         self.server_sleep = self.button_slow_ok.input_currency_3.text()
+        
+        #exc and err handling
         if self.request_timeout.isdigit() == False:
             qmsgBox = QMessageBox()
             qmsgBox.setStyleSheet("background-color: #22222e;\n"
@@ -267,10 +284,13 @@ class RequestForSlowResponseDialog(QtWidgets.QDialogButtonBox):
                 asyncio.run(main(glob_glob,x[0],int(x[1])))
                 asyncio.run(asyncio.sleep(int(self.request_timeout)/1000))
                 if message_try !='':
+                    #split into main thread and processing thread
                     self.thread = threading.Timer(0, self.rerun)
                     self.thread.start()
                 self.close()
         self.close()
+        
+    #reconnect function    
     def rerun(self):
         value = 0
         while value<100:
@@ -299,14 +319,14 @@ class RequestForSlowResponseDialog(QtWidgets.QDialogButtonBox):
         self.close()
         
 
-    
+#Dialog main window    
 class ClientWidget(QtWidgets.QMainWindow):
     def __init__(self):
         super(ClientWidget, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.init_UI()
-    siganl_protocol_send = pyqtSignal(str)
+    siganl_protocol_send = pyqtSignal(str) #processing info about conn/no-conn to the server
     def init_UI(self):
         self.setWindowTitle('Client')
         self.ui.input_currency_2.setPlaceholderText('ip-address')
@@ -328,6 +348,7 @@ class ClientWidget(QtWidgets.QMainWindow):
         layout.addWidget(self.ui.scrollArea)
         print(1)
     
+    #signal processing function 
     @ QtCore.pyqtSlot(str)
     def evt_signal_protocol_send(self,arg):
         connect = arg
@@ -338,7 +359,8 @@ class ClientWidget(QtWidgets.QMainWindow):
         labellist.append(lable)
         myform.addRow(labellist[-1])
         lable.close()
-        
+    
+    #function for processing press the "RequestForSlowResponse" button
     def evt_pushbutton_clicked(self):
         if 'x' not in globals():
             qmsgBox = QMessageBox()
@@ -354,10 +376,13 @@ class ClientWidget(QtWidgets.QMainWindow):
             self.button_ok = RequestForSlowResponseDialog()
             self.button_ok.show()
     
+    #saving parameter function "press ok button"
     def evt_pushbutton_3_clicked(self):
         global x
         x = self.request_to_server()
     
+    
+    #function for processing press the "RequestForFastResponse" button
     def evt_pushbutton_2_clicked(self):
         if 'x' not in globals():
             qmsgBox = QMessageBox()
@@ -373,11 +398,13 @@ class ClientWidget(QtWidgets.QMainWindow):
             self.button_ok = RequestForFastResponseDialog()
             self.button_ok.show()
     
+    #ip and host input processing function 
     def request_to_server(self):
         input_ip = self.ui.input_currency_2.text()
         input_port = self.ui.input_currency_3.text()
         return input_ip,input_port
     
+    #function for processing press the "Option" button
     def evt_toolbutton_clicked(self):
         self.button_ok = OptionDialog()
         self.button_ok.show()
@@ -385,27 +412,32 @@ class ClientWidget(QtWidgets.QMainWindow):
 
 global connect
 connect = ''
+
+#client protocol class
 class EchoClientProtocol(asyncio.Protocol):
     
     
     def __init__(self, message, on_con_lost):
         self.message = message
         self.on_con_lost = on_con_lost
-
+    
+    #send info when connected function
     def connection_made(self, transport):
         data_string = pickle.dumps(self.message)
         transport.write(data_string)
         print('Data sent: {!r}'.format(self.message))
         if 'application' in locals() or 'application' in globals():
             application.siganl_protocol_send.emit('Data sent: {!r}'.format(self.message))
-
+    
+    #get info function
     def data_received(self, data):
         global data_decode
         data_decode = pickle.loads(data)
         print('Data received: {!r}'.format(data_decode))
         if 'application' in locals() or 'application' in globals():
             application.siganl_protocol_send.emit('Data received: {!r}'.format(data_decode))
-
+    
+    #connection loss function
     def connection_lost(self, exc):
         print('The server closed the connection')
         self.on_con_lost.set_result(True)
@@ -413,7 +445,7 @@ class EchoClientProtocol(asyncio.Protocol):
             application.siganl_protocol_send.emit('The server closed the connection')
     
     
-
+#async server connection function
 async def main(message,ip,host):
     global message_try
     global labellist
@@ -440,12 +472,15 @@ async def main(message,ip,host):
         connect = ''
         message_try = ''
         transport.close()
+        
+#class for unittest
 class Nado():
     global data_decode
     def __init__(self):
         self.data_decode = data_decode
     
 
+#main app function
 def appl():
     print(type(10)==int)
     global application
