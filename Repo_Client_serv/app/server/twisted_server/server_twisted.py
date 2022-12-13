@@ -2,10 +2,6 @@ from twisted.internet import reactor, protocol
 from twisted.internet.protocol import Protocol
 from twisted.internet.protocol import ServerFactory as ServFactory
 from twisted.internet.endpoints import TCP4ServerEndpoint
-from twisted.internet.task import deferLater
-from twisted.internet.defer import inlineCallbacks
-from twisted.internet.defer import Deferred
-from autobahn.twisted.util import sleep
 import pickle
 import datetime
 import logging
@@ -18,50 +14,45 @@ class Server(Protocol):
         self.users = users
 
     def connectionMade(self):
-        #print('connection success!')
         d = self.transport.getPeer()
         logging.info('Connection from {}\n'.format((d.host, d.port)))
         self.users.append(self)
 
-    """@inlineCallbacks
-    def slow_resp(self, secs):
-        yield sleep(secs)
-        return datetime.datetime.now()
-        #d = Deferred()
-        #reactor.callLater(secs, d.callback, None)
-        #return d"""
-
     # Событие dataReceived - получение и отправление данных
-
     def dataReceived(self, data):
         for user in self.users:
             message = pickle.loads(data)
             if type(message) == pr.WrapperMessage:
-                print('WrapperMessage')
+                if message.slow_response.connected_client_count !=0 or len(message.fast_response.current_date_time)!=0:
+                    out = pickle.dumps(ValueError)
+                    self.transport.write(out)
+                    self.transport.loseConnection()
+                    break
+                else:
+                    pass
             else:
                 out = pickle.dumps(ValueError)
-                # transport.write - отправка сообщения
                 self.transport.write(out)
+                self.transport.loseConnection()
+                break
             if message.request_for_slow_response.time_in_seconds_to_sleep != 0:
-                # print(len(message.request_for_slow_response.time_in_seconds_to_sleep))
                 sec = int(message.request_for_slow_response.time_in_seconds_to_sleep)
-                print(datetime.datetime.now())
-                d = Deferred()
-                reactor.callLater(5000, d.callback, None)
-                #print(res)
-                #print(datetime.datetime.now())
-                out_put = pr.WrapperMessage()
-                out_put.slow_response.connected_client_count = len(self.users)
-                out = pickle.dumps(out_put)
-                self.transport.write(out)
-                #print("IN IF")
+                reactor.callLater(sec, self.wake_up)
             else:
-                #print('else')
                 out_put = pr.WrapperMessage()
-                out_put.fast_response.current_date_time = str(datetime.datetime.now())
+                s = str(datetime.datetime.now().isoformat()).replace('-', '')
+                s = s.replace(':', '')
+                out_put.fast_response.current_date_time = s
                 out = pickle.dumps(out_put)
                 self.transport.write(out)
-            self.transport.loseConnection()
+                self.transport.loseConnection()
+
+    def wake_up(self):
+        out_put = pr.WrapperMessage()
+        out_put.slow_response.connected_client_count = len(self.users)
+        out = pickle.dumps(out_put)
+        self.transport.write(out)
+        self.transport.loseConnection()
 
     # Событие connectionLost срабатывает при разрыве соединения с клиентом
     def connectionLost(self, reason):
@@ -76,12 +67,10 @@ class ServerFactory(ServFactory):
 
     def buildProtocol(self, addr):
         return Server(self.users)
-        # return super().buildProtocol(addr)
 
 
 if __name__ == '__main__':
     port = conf.read_ini('../../configs/config.ini', 'twisted')
-    print(port)
     endpoint = TCP4ServerEndpoint(reactor, port)
     endpoint.listen(ServerFactory())
     logging.basicConfig(level=logging.INFO, filename="logs_twisted.log", filemode="w", format="%(asctime)s %(levelname)s %(message)s")
