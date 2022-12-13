@@ -4,50 +4,36 @@ import asyncio
 import datetime
 import pickle
 import socket
-import pr_pb2 as pr
-import datetime
-import pickle
-import socket
-import pr_pb2 as pr
-import time
+import pr_pb2 as pr # import protocol class
 import time
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtGui import QIcon
 from PyQt5.QtGui import QIcon
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import QThread
-from PyQt5.QtCore import QThread
-from main_gui import Ui_MainWindow
-from RequestForFastResponse import Ui_RequestForFastResponse
-from RequestForSlowResponse import Ui_RequestForSlowResponse
-from option import Ui_Dialog
+from main_gui import Ui_MainWindow # import main window class
+from RequestForFastResponse import Ui_RequestForFastResponse # import FastResponse window class
+from RequestForSlowResponse import Ui_RequestForSlowResponse # import SlowResponse window class
+from option import Ui_Dialog #import option window class
 from PyQt5.QtWidgets import *
-import asyncio
 from threading import Thread
-from threading import Thread
-import tkinter as tk
 import tkinter as tk
 import threading
-import inspect
 import inspect
 
 #global values
 global client_timeout
-client_timeout = 'MissInput'
+client_timeout = 'MissInput' #time of reconnection timeout
 global message_try
-message_try = ''
+message_try = '' # additional optional to save message
 global schet
-schet = 1
+schet = 1 
 global labellist
-labellist = []
+labellist = [] # parameter for filling scrollbar
 global in_button
-in_button = 0
+in_button = 0 # parameter necssary to not given access to button if there is a reconnection to server
 
-glob_glob = pr.WrapperMessage()
+glob_glob = pr.WrapperMessage() # sent to server info
 
 #Dialog option window
 class OptionDialog(QtWidgets.QDialogButtonBox):
@@ -158,10 +144,8 @@ class RequestForFastResponseDialog(QtWidgets.QDialogButtonBox):
                 QMessageBox.critical(qmsgBox,"HostError","Host has the form 'N', where 0<=N<=65535")
                 self.close()
             else:
-                print(message_try)
                 glob_glob = pr.WrapperMessage()
                 glob_glob.request_for_fast_response.CopyFrom(pr.RequestForFastResponse())
-                print(glob_glob)
                 asyncio.run(main(glob_glob,x[0],int(x[1])))
                 asyncio.run(asyncio.sleep(int(self.request_timeout)/1000))
                 if message_try!='':
@@ -184,12 +168,10 @@ class RequestForFastResponseDialog(QtWidgets.QDialogButtonBox):
             (local_time := int(client_timeout)) if client_timeout.isdigit()==True else (local_time :=0)
             if message_try != '' and local_time!=0:
                 asyncio.run(asyncio.sleep(local_time))
-                print("Вроде прошло")
             elif message_try == '':
                 value = 1001
             else:
                 value = 1001
-                print("Воу полегче нажми галочку в настройках")
         else:
             in_button = 0
             return
@@ -280,7 +262,6 @@ class RequestForSlowResponseDialog(QtWidgets.QDialogButtonBox):
             else:
                 glob_glob = pr.WrapperMessage()
                 glob_glob.request_for_slow_response.time_in_seconds_to_sleep = self.server_sleep
-                print(glob_glob)
                 asyncio.run(main(glob_glob,x[0],int(x[1])))
                 asyncio.run(asyncio.sleep(int(self.request_timeout)/1000))
                 if message_try !='':
@@ -303,15 +284,12 @@ class RequestForSlowResponseDialog(QtWidgets.QDialogButtonBox):
             glob_glob.request_for_slow_response.time_in_seconds_to_sleep = self.server_sleep
             task1 = asyncio.run(main(glob_glob,x[0],int(x[1])))
             (local_time := int(client_timeout)) if client_timeout.isdigit()==True else (local_time :=0)
-            print(labellist)
             if message_try != '' and local_time!=0:
                 asyncio.run(asyncio.sleep(local_time))
-                print("Вроде прошло")
             elif message_try == '':
                 value = 1001
             else:
                 value = 1001
-                print("Воу полегче нажми галочку в настройках")
         else:
             in_button = 0
             return
@@ -346,7 +324,6 @@ class ClientWidget(QtWidgets.QMainWindow):
         self.value_fast = 0
         layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(self.ui.scrollArea)
-        print(1)
     
     #signal processing function 
     @ QtCore.pyqtSlot(str)
@@ -408,7 +385,6 @@ class ClientWidget(QtWidgets.QMainWindow):
     def evt_toolbutton_clicked(self):
         self.button_ok = OptionDialog()
         self.button_ok.show()
-        print(client_timeout)
 
 global connect
 connect = ''
@@ -425,7 +401,6 @@ class EchoClientProtocol(asyncio.Protocol):
     def connection_made(self, transport):
         data_string = pickle.dumps(self.message)
         transport.write(data_string)
-        print('Data sent: {!r}'.format(self.message))
         if 'application' in locals() or 'application' in globals():
             application.siganl_protocol_send.emit('Data sent: {!r}'.format(self.message))
     
@@ -433,13 +408,11 @@ class EchoClientProtocol(asyncio.Protocol):
     def data_received(self, data):
         global data_decode
         data_decode = pickle.loads(data)
-        print('Data received: {!r}'.format(data_decode))
         if 'application' in locals() or 'application' in globals():
             application.siganl_protocol_send.emit('Data received: {!r}'.format(data_decode))
     
     #connection loss function
     def connection_lost(self, exc):
-        print('The server closed the connection')
         self.on_con_lost.set_result(True)
         if 'application' in locals() or 'application' in globals():
             application.siganl_protocol_send.emit('The server closed the connection')
@@ -458,7 +431,6 @@ async def main(message,ip,host):
         transport, protocol = await loop.create_connection(
             lambda: EchoClientProtocol(message, on_con_lost),
             ip, host)
-        print(transport)
     except:
         connect = 'ConnectionEror: The server with the entered ip and host is not responding\n'
         message_try = message
@@ -482,14 +454,12 @@ class Nado():
 
 #main app function
 def appl():
-    print(type(10)==int)
     global application
     global in_button
     in_button = 0
     app = QtWidgets.QApplication([])
     application = ClientWidget()
     application.show()
-    print(labellist)
     sys.exit(app.exec())
 if __name__ == '__main__':
     appl()
