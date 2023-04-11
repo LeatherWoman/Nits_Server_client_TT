@@ -20,6 +20,8 @@ from threading import Thread
 import tkinter as tk
 import threading
 import inspect
+from google.protobuf.internal.encoder import _VarintBytes
+from google.protobuf.internal.decoder import _DecodeVarint32
 
 #global values
 global client_timeout
@@ -386,40 +388,59 @@ class ClientWidget(QtWidgets.QMainWindow):
         self.button_ok = OptionDialog()
         self.button_ok.show()
 
+
 global connect
 connect = ''
 
-#client protocol class
+
+# client protocol class
 class EchoClientProtocol(asyncio.Protocol):
-    
-    
+
     def __init__(self, message, on_con_lost):
         self.message = message
         self.on_con_lost = on_con_lost
-    
-    #send info when connected function
+
+    # send info when connected function
     def connection_made(self, transport):
-        data_string = pickle.dumps(self.message)
-        transport.write(data_string)
+        size = self.message.ByteSize()
+        packed_len = _VarintBytes(size)
+        data_string = self.message.SerializeToString()
+        transport.write(packed_len + data_string)
         if 'application' in locals() or 'application' in globals():
             application.siganl_protocol_send.emit('Data sent: {!r}'.format(self.message))
-    
-    #get info function
+
+    # get info function
     def data_received(self, data):
         global data_decode
-        data_decode = pickle.loads(data)
+        data = bytes(data)
+        pos = 0
+        while pos < len(data):
+            data_decode, pos = self.read_mes(data, pos)
+        st = 'Data received: {!r}'.format(data_decode)
+        if data_decode == self.message:
+            data_decode = ValueError
+            st = 'ValueError: the wrong message was sent'
         if 'application' in locals() or 'application' in globals():
-            application.siganl_protocol_send.emit('Data received: {!r}'.format(data_decode))
-    
-    #connection loss function
+            application.siganl_protocol_send.emit(st)
+
+    # connection loss function
     def connection_lost(self, exc):
         self.on_con_lost.set_result(True)
         if 'application' in locals() or 'application' in globals():
             application.siganl_protocol_send.emit('The server closed the connection')
-    
-    
-#async server connection function
-async def main(message,ip,host):
+
+    def read_mes(self, data, pos):
+        msg_len, new_pos = _DecodeVarint32(data, pos)
+        pos = new_pos
+        msg_buf = data[pos:(pos + msg_len)]
+        pos += msg_len
+        message = pr.WrapperMessage()
+        message.ParseFromString(msg_buf)
+        return message, pos
+
+
+# async server connection function
+async def main(message, ip, host):
     global message_try
     global labellist
     global data_decode
@@ -432,7 +453,7 @@ async def main(message,ip,host):
             lambda: EchoClientProtocol(message, on_con_lost),
             ip, host)
     except:
-        connect = 'ConnectionEror: The server with the entered ip and host is not responding\n'
+        connect = 'ConnectionError: The server with the entered ip and host is not responding\n'
         message_try = message
         if application:
             application.siganl_protocol_send.emit(connect)
