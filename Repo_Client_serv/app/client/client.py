@@ -417,14 +417,15 @@ class EchoClientProtocol(asyncio.Protocol):
         while pos < len(data):
             data_decode, pos = self.read_mes(data, pos)
         st = 'Data received: {!r}'.format(data_decode)
-        if data_decode == self.message:
-            data_decode = ValueError
-            st = 'ValueError: the wrong message was sent'
         if 'application' in locals() or 'application' in globals():
             application.siganl_protocol_send.emit(st)
 
     # connection loss function
     def connection_lost(self, exc):
+        if data_decode == ValueError:
+            st = 'ValueError: the server could not decode the message or received an incorrect one'
+            if 'application' in locals() or 'application' in globals():
+                application.siganl_protocol_send.emit(st)
         self.on_con_lost.set_result(True)
         if 'application' in locals() or 'application' in globals():
             application.siganl_protocol_send.emit('The server closed the connection')
@@ -444,6 +445,7 @@ async def main(message, ip, host):
     global message_try
     global labellist
     global data_decode
+    data_decode = ValueError
     try:
         loop = asyncio.get_running_loop()
 

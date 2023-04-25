@@ -5,21 +5,42 @@ import logging
 
 from google.protobuf.internal.encoder import _VarintBytes
 from google.protobuf.internal.decoder import _DecodeVarint32
+from google.protobuf.message import DecodeError
 
-import pr_pb2 as pr
-import app.server.common.read_config as conf
+from app.server.common import pr_pb2 as pr
+from app.server.common.read_config import read_ini
 
-#чтение и декодирование сообщения
-async def read_mes(data, pos):
-    msg_len, new_pos = _DecodeVarint32(data, pos)
-    pos = new_pos
-    msg_buf = data[pos:(pos + msg_len)]
+#reading and decoding the message
+async def read_mes(data, pos, typeMes):
+    msg_len, pos = _DecodeVarint32(data, pos)
+    try:
+        msg_buf = data[pos:(pos + msg_len)]
+        #msg_buf = data[1000]
+    except IndexError:
+        logging.error('An incomplete message was received')
+        return 0, 0
+    message = typeMes
+    try:
+        message.ParseFromString(msg_buf)
+    except DecodeError:
+        logging.error('The message could not be decoded')
+        return 0, 0
     pos += msg_len
-    message = pr.WrapperMessage()
-    message.ParseFromString(msg_buf)
     return message, pos
 
-#кодирование сообщения
+#reading all received messages
+async def collect_mes(data):
+    pos = 0
+    messages = []
+    while pos < len(data):
+        message, pos = await read_mes(data, pos, pr.WrapperMessage())
+        if message:
+            messages.append(message)
+        else:
+            return messages
+    return messages
+
+#encoding of the message
 async def send_mes(resp):
     size = resp.ByteSize()
     packed_len = _VarintBytes(size)
@@ -51,22 +72,17 @@ async def handler(client, addr):
             data = await loop.sock_recv(client, 1000)
             if not data:
                 break
-            pos = 0
-            while pos < len(data):
-                message, pos = await read_mes(data, pos)
+
+            # data processing
+            messages = await collect_mes(data)
+            for message in messages:
                 if type(message) == pr.WrapperMessage:
                     if message.HasField('slow_response') or message.HasField('fast_response'):
-                        await loop.sock_sendall(client, data)
                         client_count -= 1
                         break
-                    else:
-                         pass
                 else:
-                    await loop.sock_sendall(client, data)
                     client_count -= 1
                     break
-
-                #data processing
                 if message.HasField('request_for_slow_response'):
                     resp = pr.WrapperMessage()
                     resp.slow_response.connected_client_count = client_count
@@ -77,15 +93,12 @@ async def handler(client, addr):
                     s = s.replace(':', '')
                     resp.fast_response.current_date_time = s
 
-                #sending data
+                # sending data
                 resp = await send_mes(resp)
-                print('send')
                 await loop.sock_sendall(client, resp)
             client_count-=1
             break
-        print('end while')
     logging.info('Close connection from {}\n'.format(addr))
-
 
 
 if __name__ == '__main__':
@@ -93,8 +106,8 @@ if __name__ == '__main__':
     client_count = 0
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    logging.basicConfig(level=logging.INFO, filename="logs_asyncio.log", filemode="w", format="%(asctime)s %(levelname)s %(message)s")
-    port = conf.read_ini('../../configs/config.ini', 'asyncio')
+    logging.basicConfig(level=logging.INFO, filename="./logs_asyncio.log", filemode="w", format="%(asctime)s %(levelname)s %(message)s")
+    port = read_ini('../../configs/config.ini', 'asyncio')
     loop.create_task(main(port))
     try:
         loop.run_forever()
